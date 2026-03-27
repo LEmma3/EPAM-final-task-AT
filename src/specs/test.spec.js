@@ -1,78 +1,41 @@
-describe("UC-1 Sorting Validation - Login Page and sorting", () => {
-  it("should let you log in and sort the price (low to high)", async () => {
-    await browser.url('/');
+const LoginPage = require('../po/pages/login.page');
+const InventoryPage = require('../po/pages/inventory.page');
+const CartPage = require('../po/pages/cart.page');
 
-    const usernameInput = $('//input[@placeholder="Username"]');
-    const passwordInput = $('//input[@placeholder="Password"]');
-    const loginButton = $('//input[@value="Login"]');
-    
-    await expect(usernameInput).toBeDisplayed();
-    await expect(passwordInput).toBeDisplayed();
-    await expect(loginButton).toBeDisplayed();
+describe("UC-1 Sorting Validation", () => {
+  it("should login to the page and sort prices low to high", async () => {
+    await LoginPage.open('/');
+    await LoginPage.login('standard_user', 'secret_sauce');
 
-    await usernameInput.setValue('standard_user');
-    await passwordInput.setValue('secret_sauce');
-    await loginButton.click();
+    await InventoryPage.sortByPriceLowToHigh();
 
-    const sortDropdown = $('//select[@class="product_sort_container"]');
-    await expect(sortDropdown).toBeDisplayed();
-    await sortDropdown.selectByVisibleText('Price (low to high)');
-
-    const priceElements = await $$('//div[@data-test="inventory-item-price"]');
-    await expect(priceElements.length).toBeGreaterThan(0);
-
-    const prices = [];
-    for (const element of priceElements) {
-      const text = await element.getText();
-      prices.push(parseFloat(text.replace('$', '')));
-    }
+    const prices = await InventoryPage.getPrices();
 
     for (let i = 0; i < prices.length - 1; i++) {
-        expect(prices[i]).toBeLessThanOrEqual(prices[i + 1]);
+      expect(prices[i]).toBeLessThanOrEqual(prices[i + 1]);
     }
-    
-  })
+  });
+
 });
 
-describe("UC-2 Cart State Logic - Add items to cart", () => {
-  it("should add two different items to the cart and then remove one item", async () => {
-    await browser.url('/');
+  describe("UC-2 Cart State Logic", () => {
+  it("should add and remove items from cart", async () => {
+    await LoginPage.open('/');
+    await LoginPage.login('standard_user', 'secret_sauce');
 
-    const usernameInput = $('//input[@placeholder="Username"]');
-    const passwordInput = $('//input[@placeholder="Password"]');
-    const loginButton = $('//input[@value="Login"]');
-    
-    await expect(usernameInput).toBeDisplayed();
-    await expect(passwordInput).toBeDisplayed();
-    await expect(loginButton).toBeDisplayed();
+    await InventoryPage.addFirstNItems(2);
 
-    await usernameInput.setValue('standard_user');
-    await passwordInput.setValue('secret_sauce');
-    await loginButton.click();
+    await expect(InventoryPage.cartBadge).toHaveText('2');
 
-    await expect($('//div[@class="inventory_list"]')).toBeDisplayed();
+    await InventoryPage.openCart();
 
-    const addToCartButtons = await $$('//button[text()="Add to cart"]');
-    await expect(addToCartButtons.length).toBeGreaterThanOrEqual(2);
-  
-    await addToCartButtons[0].click();
-    await addToCartButtons[1].click();
+    const items = await CartPage.cartItems;
+    await expect(items.length).toBe(2);
 
-    const cartBadge = await $('//span[@class="shopping_cart_badge"]');
-    await expect(cartBadge).toBeDisplayed();
-    await expect(cartBadge).toHaveText('2');
+    await CartPage.removeItem(0);
 
-    await $('//div[@class="shopping_cart_container"]').click();
-
-    const cartItems = await $$('//div[@class="cart_item"]');
-    await expect(cartItems.length).toBe(2);
-
-    const removeButtons = await $$('//button[text()="Remove"]');
-    await expect(removeButtons.length).toBeGreaterThanOrEqual(2);
-
-    await removeButtons[0].click();
-
-    await expect(cartBadge).toBeDisplayed();
-    await expect(cartBadge).toHaveText('1');
+    await expect(CartPage.cartBadge).toHaveText('1');
   });
+
+
 });
